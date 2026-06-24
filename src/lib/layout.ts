@@ -1,11 +1,11 @@
 import { FamilyTree } from './kinship';
 
-export const CW = 82;   // card width
-export const CH = 80;   // card height
-export const SP = 12;   // spouse gap
-export const HG = 30;   // horizontal gap between subtrees
-export const VG = 80;   // vertical gap between generations
-export const PAD = 44;  // canvas padding
+export const CW = 88;   // circle diameter
+export const CH = 88;   // circle diameter (square bounding box)
+export const SP = 16;   // spouse gap
+export const HG = 32;   // horizontal gap between subtrees
+export const VG = 60;   // vertical gap between generations
+export const PAD = 48;  // canvas padding
 
 export interface LayoutNode {
   primaryId: string;

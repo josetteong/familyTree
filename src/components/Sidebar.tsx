@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FamilyTree } from '../lib/kinship';
+import { FamilyTree, Person } from '../lib/kinship';
 import { RelType, AddPersonArgs } from '../hooks/useFamilyTree';
 
 interface Props {
@@ -17,67 +17,91 @@ type View = 'list' | 'add' | { edit: string };
 export default function Sidebar(props: Props) {
   const { tree, egoId, targetId, onCardClick, onAddPerson, onUpdatePerson, onDeletePerson } = props;
   const [view, setView] = useState<View>('list');
+  const [collapsed, setCollapsed] = useState(false);
 
   const people = [...tree.people.values()].filter(p => !p.id.startsWith('__vp__'));
+
+  if (collapsed) {
+    return (
+      <div className="card bg-base-100 shadow-xl h-full w-10 flex flex-col items-center pt-2 rounded-2xl">
+        <button className="btn btn-ghost btn-xs text-base-content/50 text-lg" onClick={() => setCollapsed(false)} title="Expand">›</button>
+      </div>
+    );
+  }
 
   if (typeof view === 'object') {
     const person = tree.people.get(view.edit);
     if (!person) { setView('list'); return null; }
     return (
       <EditPanel
-        personId={view.edit}
-        tree={tree}
-        egoId={egoId}
+        personId={view.edit} tree={tree} egoId={egoId}
         onBack={() => setView('list')}
         onSetEgo={() => onCardClick(view.edit)}
+        onCollapse={() => setCollapsed(true)}
         onUpdate={onUpdatePerson}
-        onDelete={async (id) => { await onDeletePerson(id); setView('list'); return null; }}
+        onDelete={async id => { await onDeletePerson(id); setView('list'); return null; }}
       />
     );
   }
 
   return (
-    <aside style={s.aside}>
-      <div style={s.tabs}>
-        <button style={{ ...s.tab, ...(view === 'list' ? s.tabOn : {}) }} onClick={() => setView('list')}>People</button>
-        <button style={{ ...s.tab, ...(view === 'add'  ? s.tabOn : {}) }} onClick={() => setView('add')}>+ Add</button>
+    <div className="card bg-base-100 shadow-xl h-full w-80 flex flex-col rounded-2xl overflow-hidden relative">
+      {/* Collapse button — floats top-right so it doesn't shrink the tabs */}
+      <button
+        className="absolute top-1 right-1 z-10 btn btn-ghost btn-xs opacity-30 hover:opacity-80 text-base leading-none"
+        onClick={() => setCollapsed(true)} title="Collapse"
+      >‹</button>
+
+      {/* Tabs — each exactly 50% of sidebar width */}
+      <div role="tablist" className="tabs tabs-border shrink-0">
+        <button role="tab" className={`tab flex-1 ${view === 'list' ? 'tab-active font-bold' : ''}`} onClick={() => setView('list')}>
+          Family
+        </button>
+        <button role="tab" className={`tab flex-1 ${view === 'add' ? 'tab-active font-bold' : ''}`} onClick={() => setView('add')}>
+          + Add
+        </button>
       </div>
 
+      {/* People list */}
       {view === 'list' && (
-        <div style={s.panel}>
+        <ul className="p-3 flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
           {people.map(p => (
-            <div
-              key={p.id}
-              style={{ ...s.item, ...(p.id === egoId ? s.itemEgo : {}), ...(p.id === targetId && p.id !== egoId ? s.itemTgt : {}) }}
-              onClick={() => setView({ edit: p.id })}
-            >
-              <div style={{ ...s.av, ...(p.gender === 'M' ? s.avM : s.avF) }}>
-                {p.gender === 'M' ? '👨' : '👩'}
+            <li key={p.id} className="list-none">
+              <div
+                className={`flex items-center gap-3 rounded-2xl cursor-pointer px-3 py-3 w-full
+                  ${p.id === egoId ? 'bg-primary/15 text-primary' : 'bg-base-300/70 hover:bg-base-300'}`}
+                onClick={() => setView({ edit: p.id })}
+              >
+                <Avatar person={p} />
+                <span className="flex-1 text-base font-medium">{p.name}</span>
+                {p.id === egoId && <span className="badge badge-primary badge-sm">Me</span>}
+                {p.id === targetId && p.id !== egoId && <span className="badge badge-success badge-sm">→</span>}
+                <button
+                  className="opacity-30 hover:opacity-80 hover:text-error text-sm leading-none px-1"
+                  onClick={e => { e.stopPropagation(); onDeletePerson(p.id); }}
+                  title="Delete"
+                >✕</button>
               </div>
-              <span style={s.pname}>{p.name}</span>
-              {p.id === egoId && <span style={{ ...s.badge, ...s.badgeEgo }}>Me</span>}
-              {p.id === targetId && p.id !== egoId && <span style={{ ...s.badge, ...s.badgeTgt }}>→</span>}
-              <button style={s.btnDel} onClick={e => { e.stopPropagation(); onDeletePerson(p.id); }} title="Delete">✕</button>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
+      {/* Add form */}
       {view === 'add' && (
-        <AddForm people={people} egoId={egoId} onAdd={onAddPerson} onDone={() => setView('list')} />
+        <div className="flex-1 overflow-y-auto p-3">
+          <AddForm people={people} onAdd={onAddPerson} onDone={() => setView('list')} />
+        </div>
       )}
-    </aside>
+    </div>
   );
 }
 
 // ── Edit Panel ────────────────────────────────────────────────────────────────
 
-function EditPanel({ personId, tree, egoId, onBack, onSetEgo, onUpdate, onDelete }: {
-  personId: string;
-  tree: FamilyTree;
-  egoId: string | null;
-  onBack: () => void;
-  onSetEgo: () => void;
+function EditPanel({ personId, tree, egoId, onBack, onSetEgo, onCollapse, onUpdate, onDelete }: {
+  personId: string; tree: FamilyTree; egoId: string | null;
+  onBack: () => void; onSetEgo: () => void; onCollapse: () => void;
   onUpdate: (id: string, changes: Record<string, unknown>) => Promise<string | null>;
   onDelete: (id: string) => Promise<string | null>;
 }) {
@@ -92,26 +116,22 @@ function EditPanel({ personId, tree, egoId, onBack, onSetEgo, onUpdate, onDelete
 
   const people = [...tree.people.values()].filter(p => !p.id.startsWith('__vp__') && p.id !== personId);
   const isReal = (id: string | null | undefined) => id && !id.startsWith('__vp__');
-  const father  = isReal(person.fatherId)  ? tree.people.get(person.fatherId!)  : null;
-  const mother  = isReal(person.motherId)  ? tree.people.get(person.motherId!)  : null;
-  const spouse  = isReal(person.spouseId)  ? tree.people.get(person.spouseId!)  : null;
+  const father   = isReal(person.fatherId) ? tree.people.get(person.fatherId!) : null;
+  const mother   = isReal(person.motherId) ? tree.people.get(person.motherId!) : null;
+  const spouse   = isReal(person.spouseId) ? tree.people.get(person.spouseId!) : null;
   const children = [...tree.people.values()].filter(p =>
     !p.id.startsWith('__vp__') && (p.fatherId === personId || p.motherId === personId)
   );
+  const isEgo = personId === egoId;
 
   async function saveInfo() {
     setSaving(true); setErr('');
-    const e = await onUpdate(personId, {
-      name,
-      gender,
-      birthYear: birthYear ? parseInt(birthYear) : null,
-    });
+    const e = await onUpdate(personId, { name, gender, birthYear: birthYear ? parseInt(birthYear) : null });
     setSaving(false);
     if (e) setErr(e);
   }
 
-  async function removeLink(field: 'fatherId' | 'motherId' | 'spouseId') {
-    setErr('');
+  async function removeLink(field: string) {
     const e = await onUpdate(personId, { [field]: null });
     if (e) setErr(e);
   }
@@ -119,105 +139,91 @@ function EditPanel({ personId, tree, egoId, onBack, onSetEgo, onUpdate, onDelete
   async function addLink() {
     if (!linkTarget) return;
     setErr('');
-    let e: string | null;
-    if (linkType === 'childId') {
-      // Update the child to point back to this person as a parent
-      const field = gender === 'M' ? 'fatherId' : 'motherId';
-      e = await onUpdate(linkTarget, { [field]: personId });
-    } else {
-      e = await onUpdate(personId, { [linkType]: linkTarget });
-    }
+    const e = linkType === 'childId'
+      ? await onUpdate(linkTarget, { [gender === 'M' ? 'fatherId' : 'motherId']: personId })
+      : await onUpdate(personId, { [linkType]: linkTarget });
     if (e) setErr(e);
     else setLinkTarget('');
   }
 
-  const isEgo = personId === egoId;
-
   return (
-    <aside style={s.aside}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderBottom: '1px solid #d8cfc4' }}>
-        <button style={s.btnBack} onClick={onBack}>← Back</button>
-        <button
-          style={{ ...s.btnMe, ...(isEgo ? s.btnMeOn : {}) }}
-          onClick={onSetEgo}
-        >{isEgo ? '★ Me' : '☆ Set as Me'}</button>
+    <div className="card bg-base-100 shadow-xl h-full w-80 flex flex-col rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-base-300 shrink-0">
+        <button className="btn btn-ghost btn-xs font-bold" onClick={onBack}>← Back</button>
+        <button className={`btn btn-xs ml-auto ${isEgo ? 'btn-primary' : 'btn-outline btn-primary'}`} onClick={onSetEgo}>
+          {isEgo ? '★ Me' : '☆ Set as Me'}
+        </button>
+        <button className="btn btn-ghost btn-xs text-base-content/30 text-base" onClick={onCollapse}>‹</button>
       </div>
 
-      <div style={s.panel}>
-        {/* Basic info */}
-        <Field label="Name">
-          <input style={s.input} value={name} onChange={e => setName(e.target.value)} />
-        </Field>
-        <Field label="Gender">
-          <select style={s.input} value={gender} onChange={e => setGender(e.target.value as 'M' | 'F')}>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-3">
+        {/* Info fields */}
+        <FormField label="Name">
+          <input className="input input-bordered input-sm w-full" value={name} onChange={e => setName(e.target.value)} />
+        </FormField>
+        <FormField label="Gender">
+          <select className="select select-bordered select-sm w-full" value={gender} onChange={e => setGender(e.target.value as 'M' | 'F')}>
             <option value="M">Male 男</option>
             <option value="F">Female 女</option>
           </select>
-        </Field>
-        <Field label="Birth Year">
-          <input style={s.input} type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="optional" />
-        </Field>
-        <button style={s.btnSave} onClick={saveInfo} disabled={saving}>{saving ? 'Saving…' : 'Save Info'}</button>
+        </FormField>
+        <FormField label="Birth Year">
+          <input className="input input-bordered input-sm w-full" type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="optional" />
+        </FormField>
+        <button className="btn btn-primary btn-sm w-full" onClick={saveInfo} disabled={saving}>
+          {saving ? <span className="loading loading-spinner loading-xs" /> : 'Save Info'}
+        </button>
 
-        <hr style={s.hr} />
+        <div className="divider my-0" />
 
-        {/* Relationships */}
-        <div style={s.secLabel}>Relationships</div>
-
-        {father  && <RelRow label="Father"   person={father}  onRemove={() => removeLink('fatherId')} />}
-        {mother  && <RelRow label="Mother"   person={mother}  onRemove={() => removeLink('motherId')} />}
-        {spouse  && <RelRow label="Spouse"   person={spouse}  onRemove={() => removeLink('spouseId')} />}
+        {/* Current relationships */}
+        <p className="text-xs font-bold uppercase text-base-content/40 tracking-widest">Relationships</p>
+        {father  && <RelRow label="Father"   name={father.name}  onRemove={() => removeLink('fatherId')} />}
+        {mother  && <RelRow label="Mother"   name={mother.name}  onRemove={() => removeLink('motherId')} />}
+        {spouse  && <RelRow label="Spouse"   name={spouse.name}  onRemove={() => removeLink('spouseId')} />}
         {children.length > 0 && (
-          <div style={s.childList}>
-            <span style={s.relLabel}>Children</span>
-            <span style={{ color: '#666', fontSize: '0.78rem' }}>{children.map(c => c.name).join(', ')}</span>
+          <div className="text-sm">
+            <span className="text-xs text-base-content/40 mr-2">Children</span>
+            {children.map(c => c.name).join(', ')}
           </div>
         )}
 
-        <hr style={s.hr} />
+        <div className="divider my-0" />
 
         {/* Add link */}
-        <div style={s.secLabel}>Add relationship</div>
-        <Field label="Type">
-          <select style={s.input} value={linkType} onChange={e => setLinkType(e.target.value as typeof linkType)}>
+        <p className="text-xs font-bold uppercase text-base-content/40 tracking-widest">Add relationship</p>
+        <FormField label="Type">
+          <select className="select select-bordered select-sm w-full" value={linkType} onChange={e => setLinkType(e.target.value as typeof linkType)}>
             <option value="fatherId">Father</option>
             <option value="motherId">Mother</option>
             <option value="spouseId">Spouse</option>
             <option value="childId">Child</option>
           </select>
-        </Field>
-        <Field label="Person">
-          <select style={s.input} value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
+        </FormField>
+        <FormField label="Person">
+          <select className="select select-bordered select-sm w-full" value={linkTarget} onChange={e => setLinkTarget(e.target.value)}>
             <option value="">— choose —</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-        </Field>
-        <button style={s.btnSave} onClick={addLink}>Link</button>
+        </FormField>
+        <button className="btn btn-primary btn-sm w-full" onClick={addLink}>Link</button>
 
-        {err && <p style={s.err}>{err}</p>}
+        {err && <div className="alert alert-error py-2 text-sm">{err}</div>}
 
-        <hr style={s.hr} />
-        <button style={s.btnDelete} onClick={() => onDelete(personId)}>Delete {person.name}</button>
+        <div className="divider my-0" />
+        <button className="btn btn-outline btn-error btn-sm w-full" onClick={() => onDelete(personId)}>
+          Delete {person.name}
+        </button>
       </div>
-    </aside>
-  );
-}
-
-function RelRow({ label, person, onRemove }: { label: string; person: { name: string } | null | undefined; onRemove?: () => void }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', padding: '2px 0' }}>
-      <span style={s.relLabel}>{label}</span>
-      <span style={{ flex: 1, color: person ? '#2c2c2c' : '#ccc' }}>{person?.name ?? '—'}</span>
-      {onRemove && <button style={s.btnDel} onClick={onRemove} title="Remove">✕</button>}
     </div>
   );
 }
 
 // ── Add Form ──────────────────────────────────────────────────────────────────
 
-function AddForm({ people, egoId: _egoId, onAdd, onDone }: {
-  people: ReturnType<FamilyTree['people']['values']> extends IterableIterator<infer T> ? T[] : never;
-  egoId: string | null;
+function AddForm({ people, onAdd, onDone }: {
+  people: Person[];
   onAdd: (args: AddPersonArgs) => Promise<string | null>;
   onDone: () => void;
 }) {
@@ -240,79 +246,77 @@ function AddForm({ people, egoId: _egoId, onAdd, onDone }: {
   }
 
   return (
-    <div style={s.panel}>
-      <Field label="Name"><input style={s.input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grandpa" /></Field>
-      <Field label="Gender">
-        <select style={s.input} value={gender} onChange={e => setGender(e.target.value as 'M' | 'F')}>
+    <div className="flex flex-col gap-3">
+      <FormField label="Name">
+        <input className="input input-bordered input-sm w-full" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grandpa" />
+      </FormField>
+      <FormField label="Gender">
+        <select className="select select-bordered select-sm w-full" value={gender} onChange={e => setGender(e.target.value as 'M' | 'F')}>
           <option value="M">Male 男</option>
           <option value="F">Female 女</option>
         </select>
-      </Field>
-      <Field label="Birth Year (optional)">
-        <input style={s.input} type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="1960" />
-      </Field>
+      </FormField>
+      <FormField label="Birth Year (optional)">
+        <input className="input input-bordered input-sm w-full" type="number" value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="1960" />
+      </FormField>
+
       {!isEmpty && (
         <>
-          <hr style={s.hr} />
-          <Field label="Relationship">
-            <select style={s.input} value={relType} onChange={e => setRelType(e.target.value as RelType)}>
+          <div className="divider my-0" />
+          <FormField label="Relationship">
+            <select className="select select-bordered select-sm w-full" value={relType} onChange={e => setRelType(e.target.value as RelType)}>
               <option value="child_of">Child of →</option>
               <option value="parent_of">Parent of →</option>
               <option value="spouse_of">Spouse of →</option>
               <option value="sibling_of">Sibling of →</option>
             </select>
-          </Field>
-          <Field label="Which person?">
-            <select style={s.input} value={relId} onChange={e => setRelId(e.target.value)}>
+          </FormField>
+          <FormField label="Which person?">
+            <select className="select select-bordered select-sm w-full" value={relId} onChange={e => setRelId(e.target.value)}>
               <option value="">— choose —</option>
               {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
-          </Field>
-          <p style={s.note}>Sibling: shares both parents with chosen person.</p>
+          </FormField>
+          <p className="text-xs text-base-content/40">Sibling: shares both parents with chosen person.</p>
         </>
       )}
-      <button style={s.btnSave} onClick={handleAdd} disabled={saving}>{saving ? 'Saving…' : 'Add to Tree'}</button>
-      {error && <p style={s.err}>{error}</p>}
+
+      <button className="btn btn-primary btn-sm w-full" onClick={handleAdd} disabled={saving}>
+        {saving ? <span className="loading loading-spinner loading-xs" /> : 'Add to Tree'}
+      </button>
+      {error && <div className="alert alert-error py-2 text-sm">{error}</div>}
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+function Avatar({ person }: { person: Person }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <label style={{ fontSize: '0.68rem', fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-      {children}
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl shrink-0
+      ${person.gender === 'M' ? 'bg-blue-100' : 'bg-pink-100'}`}>
+      {person.gender === 'M' ? '👨' : '👩'}
     </div>
   );
 }
 
-const s: Record<string, React.CSSProperties> = {
-  aside:    { width: 250, flexShrink: 0, background: '#faf5ee', borderRight: '1px solid #d8cfc4', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  tabs:     { display: 'flex', borderBottom: '1px solid #d8cfc4' },
-  tab:      { flex: 1, padding: '9px 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: '#aaa', borderBottom: '2px solid transparent' },
-  tabOn:    { color: '#7a4f2e', borderBottom: '2px solid #7a4f2e' },
-  panel:    { flex: 1, overflowY: 'auto', padding: 8, display: 'flex', flexDirection: 'column', gap: 6 },
-  item:     { display: 'flex', alignItems: 'center', gap: 7, padding: '6px 8px', borderRadius: 7, cursor: 'pointer', border: '2px solid transparent', background: 'white' },
-  itemEgo:  { borderColor: '#7a4f2e', background: '#fef3e2' },
-  itemTgt:  { borderColor: '#4a7a2e', background: '#eef5e8' },
-  av:       { width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 },
-  avM:      { background: '#dce8ff' },
-  avF:      { background: '#ffd8e8' },
-  pname:    { flex: 1, fontSize: '0.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  badge:    { fontSize: '0.62rem', padding: '1px 5px', borderRadius: 9, fontWeight: 700, flexShrink: 0 },
-  badgeEgo: { background: '#7a4f2e', color: '#fff' },
-  badgeTgt: { background: '#4a7a2e', color: '#fff' },
-  btnDel:   { background: 'none', border: 'none', cursor: 'pointer', color: '#ccc', fontSize: '0.75rem', padding: '0 2px', lineHeight: 1, flexShrink: 0 },
-  btnBack:  { background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#7a4f2e', fontWeight: 600, padding: '2px 4px' },
-  btnMe:    { marginLeft: 'auto', fontSize: '0.75rem', padding: '3px 10px', borderRadius: 12, border: '1px solid #ccc', background: 'white', cursor: 'pointer', fontWeight: 600, color: '#888' },
-  btnMeOn:  { background: '#7a4f2e', color: '#fff', border: '1px solid #7a4f2e' },
-  btnSave:  { padding: '7px 0', background: '#7a4f2e', color: '#fff', border: 'none', borderRadius: 7, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' },
-  btnDelete:{ padding: '7px 0', background: 'none', color: '#c04040', border: '1px solid #e0a0a0', borderRadius: 7, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' },
-  input:    { padding: '6px 8px', border: '1px solid #ccc', borderRadius: 6, fontSize: '0.84rem' },
-  hr:       { border: 'none', borderTop: '1px solid #eee', margin: '2px 0' },
-  err:      { color: '#c04040', fontSize: '0.75rem', margin: 0 },
-  note:     { fontSize: '0.7rem', color: '#bbb', lineHeight: 1.4, margin: 0 },
-  secLabel: { fontSize: '0.68rem', fontWeight: 700, color: '#bbb', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  relLabel: { fontSize: '0.72rem', color: '#aaa', width: 46, flexShrink: 0 },
-  childList:{ display: 'flex', gap: 6, alignItems: 'flex-start', flexWrap: 'wrap' },
-};
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="form-control w-full">
+      <div className="label py-0.5">
+        <span className="label-text text-xs font-bold uppercase tracking-wider text-base-content/50">{label}</span>
+      </div>
+      {children}
+    </label>
+  );
+}
+
+function RelRow({ label, name, onRemove }: { label: string; name: string; onRemove: () => void }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-xs text-base-content/40 w-12 shrink-0">{label}</span>
+      <span className="flex-1 font-medium">{name}</span>
+      <button className="btn btn-ghost btn-xs text-base-content/30 hover:text-error min-h-0 h-auto" onClick={onRemove}>✕</button>
+    </div>
+  );
+}

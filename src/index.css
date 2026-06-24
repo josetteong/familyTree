@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* Custom jiapu theme */
+@plugin "daisyui/theme" {
+  name: "jiapu";
+  default: true;
+  color-scheme: light;
+
+  --color-primary:         oklch(25% 0.05 145);
+  --color-primary-content: oklch(95% 0.02 145);
+  --color-secondary:       oklch(56% 0.06 145);
+  --color-secondary-content: oklch(98% 0.01 145);
+  --color-accent:          oklch(88% 0.10 95);
+  --color-accent-content:  oklch(25% 0.05 145);
+  --color-neutral:         oklch(40% 0.05 145);
+  --color-neutral-content: oklch(95% 0.02 145);
+  --color-base-100:        oklch(95% 0.02 85);
+  --color-base-200:        oklch(91% 0.02 85);
+  --color-base-300:        oklch(84% 0.04 145);
+  --color-base-content:    oklch(25% 0.05 145);
+  --color-info:            oklch(72% 0.11 231);
+  --color-success:         oklch(72% 0.16 150);
+  --color-warning:         oklch(82% 0.13 80);
+  --color-error:           oklch(64% 0.20 25);
+
+  --rounded-box:  1rem;
+  --rounded-btn:  0.5rem;
+  --rounded-badge: 1rem;
+}
+
+html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+body { font-family: 'Times New Roman', Times, serif; }
