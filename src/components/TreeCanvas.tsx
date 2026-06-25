@@ -3,10 +3,12 @@ import { FamilyTree } from '../lib/kinship';
 import { computeLayout, LayoutNode, CW, CH, SP, VG, midX } from '../lib/layout';
 
 const CANVAS_BG   = '#7d8f78';
-const NODE_FILL   = '#c8d4c2';
+const NODE_FILL_M = '#c8d4c2';   // sage green — male
+const NODE_FILL_F = '#e8c0bc';   // dusty rose — female
 const NODE_STROKE = '#3a4e3a';
 const NODE_EGO    = '#e8dfa0';
-const NODE_TGT    = '#a8c0a0';
+const NODE_TGT_M  = '#a8c0a0';
+const NODE_TGT_F  = '#d4a0a0';
 const LINE_COLOR  = '#2c3b2c';
 
 interface Props {
@@ -210,7 +212,10 @@ function PersonCard({ personId, x, y, tree, egoId, targetId, onClick }: {
     } catch { /* no path */ }
   }
 
-  const fill   = isEgo ? NODE_EGO : isTgt ? NODE_TGT : NODE_FILL;
+  const isMale = person.gender === 'M';
+  const fill   = isEgo ? NODE_EGO
+               : isTgt ? (isMale ? NODE_TGT_M : NODE_TGT_F)
+               : (isMale ? NODE_FILL_M : NODE_FILL_F);
   const strokeW = (isEgo || isTgt) ? 3 : 1.5;
 
   return (

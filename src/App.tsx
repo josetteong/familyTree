@@ -54,6 +54,29 @@ export default function App() {
           />
         </div>
 
+        {/* Legend — bottom right */}
+        <div className="absolute bottom-3 right-3 z-10 card bg-base-100 shadow-xl pointer-events-none">
+          <div className="card-body p-3 gap-2">
+            <p className="text-xs font-bold text-base-content/60 uppercase tracking-widest">Legend</p>
+            <div className="flex items-center gap-2 text-xs text-base-content/70">
+              <svg width="40" height="10"><line x1="0" y1="5" x2="40" y2="5" stroke="#2c3b2c" strokeWidth="1.5" strokeDasharray="4 3"/></svg>
+              Married
+            </div>
+            <div className="flex items-center gap-2 text-xs text-base-content/70">
+              <svg width="40" height="10"><line x1="0" y1="5" x2="40" y2="5" stroke="#2c3b2c" strokeWidth="1.5"/></svg>
+              Direct
+            </div>
+            <div className="flex items-center gap-2 text-xs text-base-content/70">
+              <span className="w-4 h-4 rounded-full inline-block shrink-0" style={{ background: '#e8c0bc' }} />
+              Female
+            </div>
+            <div className="flex items-center gap-2 text-xs text-base-content/70">
+              <span className="w-4 h-4 rounded-full inline-block shrink-0" style={{ background: '#c8d4c2' }} />
+              Male
+            </div>
+          </div>
+        </div>
+
         {/* Floating result bar — widens when sidebar collapses */}
         <div
           className="absolute top-3 right-3 z-10 pointer-events-none"
