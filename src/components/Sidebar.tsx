@@ -6,6 +6,8 @@ interface Props {
   tree: FamilyTree;
   egoId: string | null;
   targetId: string | null;
+  collapsed: boolean;
+  onCollapse: (v: boolean) => void;
   onCardClick: (id: string) => void;
   onAddPerson: (args: AddPersonArgs) => Promise<string | null>;
   onUpdatePerson: (id: string, changes: Record<string, unknown>) => Promise<string | null>;
@@ -15,16 +17,15 @@ interface Props {
 type View = 'list' | 'add' | { edit: string };
 
 export default function Sidebar(props: Props) {
-  const { tree, egoId, targetId, onCardClick, onAddPerson, onUpdatePerson, onDeletePerson } = props;
+  const { tree, egoId, targetId, collapsed, onCollapse, onCardClick, onAddPerson, onUpdatePerson, onDeletePerson } = props;
   const [view, setView] = useState<View>('list');
-  const [collapsed, setCollapsed] = useState(false);
 
   const people = [...tree.people.values()].filter(p => !p.id.startsWith('__vp__'));
 
   if (collapsed) {
     return (
       <div className="card bg-base-100 shadow-xl h-full w-10 flex flex-col items-center pt-2 rounded-2xl">
-        <button className="btn btn-ghost btn-xs text-base-content/50 text-lg" onClick={() => setCollapsed(false)} title="Expand">›</button>
+        <button className="btn btn-ghost btn-sm text-base-content/50 text-2xl" onClick={() => onCollapse(false)} title="Expand">›</button>
       </div>
     );
   }
@@ -37,7 +38,7 @@ export default function Sidebar(props: Props) {
         personId={view.edit} tree={tree} egoId={egoId}
         onBack={() => setView('list')}
         onSetEgo={() => onCardClick(view.edit)}
-        onCollapse={() => setCollapsed(true)}
+        onCollapse={() => onCollapse(true)}
         onUpdate={onUpdatePerson}
         onDelete={async id => { await onDeletePerson(id); setView('list'); return null; }}
       />
@@ -48,8 +49,8 @@ export default function Sidebar(props: Props) {
     <div className="card bg-base-100 shadow-xl h-full w-80 flex flex-col rounded-2xl overflow-hidden relative">
       {/* Collapse button — floats top-right so it doesn't shrink the tabs */}
       <button
-        className="absolute top-1 right-1 z-10 btn btn-ghost btn-xs opacity-30 hover:opacity-80 text-base leading-none"
-        onClick={() => setCollapsed(true)} title="Collapse"
+        className="absolute top-1 right-1 z-10 btn btn-ghost btn-sm opacity-40 hover:opacity-90 text-2xl leading-none"
+        onClick={() => onCollapse(true)} title="Collapse"
       >‹</button>
 
       {/* Tabs — each exactly 50% of sidebar width */}

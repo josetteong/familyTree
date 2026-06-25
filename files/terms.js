@@ -39,9 +39,9 @@ export const TERMS = {
   // ── parents' siblings' spouses ────────────────────────
   father_older_brother_wife:   { zh: '伯母', pinyin: 'bómǔ',       en: "father's elder brother's wife",   side: 'affinal', alt: '大妈 dàmā' },
   father_younger_brother_wife: { zh: '婶婶', pinyin: 'shěnshen',   en: "father's younger brother's wife", side: 'affinal', alt: '婶母 shěnmǔ' },
-  father_sister_husband:       { zh: '姑父', pinyin: 'gūfù',       en: "father's sister's husband",       side: 'affinal', alt: '姑丈 gūzhàng' },
+  father_sister_husband:       { zh: '姑丈', pinyin: 'gūzhàng',       en: "father's sister's husband",       side: 'affinal', alt: '姑丈 gūzhàng' },
   mother_brother_wife:         { zh: '舅妈', pinyin: 'jiùmā',      en: "mother's brother's wife",         side: 'affinal', alt: '舅母 jiùmǔ' },
-  mother_sister_husband:       { zh: '姨父', pinyin: 'yífù',       en: "mother's sister's husband",       side: 'affinal', alt: '姨丈 yízhàng' },
+  mother_sister_husband:       { zh: '姨丈', pinyin: 'yízhàng',       en: "mother's sister's husband",       side: 'affinal', alt: '姨丈 yízhàng' },
 
   // ── own siblings ──────────────────────────────────────
   older_brother:            { zh: '哥哥',   pinyin: 'gēge',        en: 'elder brother',               side: 'direct' },

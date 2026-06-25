@@ -57,7 +57,9 @@ app.post('/api/persons', async (req, res) => {
     return void res.status(409).json({ error: `"${name}" already exists.` });
 
   // rel_id is required only when there are already people in the table
-  const [[{ count }]] = await pool.query<mysql.RowDataPacket[]>('SELECT COUNT(*) AS count FROM persons');
+  const [[{ count }]] = await pool.query<mysql.RowDataPacket[]>(
+    "SELECT COUNT(*) AS count FROM persons WHERE id NOT LIKE '__vp__%'"
+  );
   if (count > 0 && !rel_id)
     return void res.status(400).json({ error: 'Choose a person to link to.' });
 
@@ -95,6 +97,33 @@ app.post('/api/persons', async (req, res) => {
       } else if (rel_type === 'spouse_of') {
         await conn.query('UPDATE persons SET spouse_id = ? WHERE id = ?', [rel_id, name]);
         await conn.query('UPDATE persons SET spouse_id = ? WHERE id = ?', [name, rel_id]);
+
+        // Auto-fill the missing parent on existing children of each partner
+        if (ref.gender === 'M') {
+          // rel_id is male (e.g. Cole) — his children missing a mother now get the new wife
+          await conn.query(
+            'UPDATE persons SET mother_id = ? WHERE father_id = ? AND mother_id IS NULL',
+            [name, rel_id]
+          );
+        } else {
+          // rel_id is female — her children missing a father now get the new husband
+          await conn.query(
+            'UPDATE persons SET father_id = ? WHERE mother_id = ? AND father_id IS NULL',
+            [name, rel_id]
+          );
+        }
+        // Same for the new person's own existing children (if any)
+        if (gender === 'M') {
+          await conn.query(
+            'UPDATE persons SET mother_id = ? WHERE father_id = ? AND mother_id IS NULL',
+            [rel_id, name]
+          );
+        } else {
+          await conn.query(
+            'UPDATE persons SET father_id = ? WHERE mother_id = ? AND father_id IS NULL',
+            [rel_id, name]
+          );
+        }
       } else if (rel_type === 'sibling_of') {
         let fatherId = ref.father_id;
         let motherId = ref.mother_id;
@@ -151,11 +180,23 @@ app.put('/api/persons/:id', async (req, res) => {
       );
     }
 
-    if (father_id !== undefined)
+    if (father_id !== undefined) {
       await conn.query('UPDATE persons SET father_id = ? WHERE id = ?', [father_id ?? null, id]);
+      // If the new father was previously a child of this person, break that cycle
+      if (father_id) {
+        await conn.query('UPDATE persons SET father_id = NULL WHERE id = ? AND father_id = ?', [father_id, id]);
+        await conn.query('UPDATE persons SET mother_id = NULL WHERE id = ? AND mother_id = ?', [father_id, id]);
+      }
+    }
 
-    if (mother_id !== undefined)
+    if (mother_id !== undefined) {
       await conn.query('UPDATE persons SET mother_id = ? WHERE id = ?', [mother_id ?? null, id]);
+      // If the new mother was previously a child of this person, break that cycle
+      if (mother_id) {
+        await conn.query('UPDATE persons SET father_id = NULL WHERE id = ? AND father_id = ?', [mother_id, id]);
+        await conn.query('UPDATE persons SET mother_id = NULL WHERE id = ? AND mother_id = ?', [mother_id, id]);
+      }
+    }
 
     if (spouse_id !== undefined) {
       // Clear old spouse's back-link

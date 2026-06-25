@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFamilyTree } from './hooks/useFamilyTree';
 import Sidebar from './components/Sidebar';
 import TreeCanvas from './components/TreeCanvas';
@@ -5,7 +6,11 @@ import ResultBar from './components/ResultBar';
 
 export default function App() {
   const { tree, version, loading, apiError, egoId, targetId, handleCardClick, addPerson, updatePerson, deletePerson } = useFamilyTree();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const egoName = egoId ? tree.people.get(egoId)?.name : null;
+
+  // Sidebar is 320px (w-80) + 12px margin; collapsed strip is ~40px + 12px margin
+  const resultLeft = sidebarCollapsed ? 64 : 344;
 
   if (loading) return <Splash>Loading…</Splash>;
   if (apiError) {
@@ -21,7 +26,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen" data-theme="jiapu">
       {/* Navbar */}
-      <div className="navbar bg-primary text-primary-content min-h-[52px] px-6 shrink-0">
+      <div className="navbar bg-primary text-primary-content min-h-13 px-6 shrink-0">
         <div className="flex-1">
           <h1 className="text-xl font-bold tracking-wide">家谱</h1>
         </div>
@@ -32,7 +37,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Canvas layer — everything floats on top */}
+      {/* Canvas layer */}
       <div className="relative flex-1 overflow-hidden">
         <TreeCanvas tree={tree} version={version} egoId={egoId} targetId={targetId} onCardClick={handleCardClick} />
 
@@ -40,6 +45,8 @@ export default function App() {
         <div className="absolute top-3 left-3 bottom-3 z-10">
           <Sidebar
             tree={tree} egoId={egoId} targetId={targetId}
+            collapsed={sidebarCollapsed}
+            onCollapse={setSidebarCollapsed}
             onCardClick={handleCardClick}
             onAddPerson={addPerson}
             onUpdatePerson={updatePerson}
@@ -47,8 +54,11 @@ export default function App() {
           />
         </div>
 
-        {/* Floating result bar */}
-        <div className="absolute top-3 right-3 z-10 pointer-events-none" style={{ left: 344 }}>
+        {/* Floating result bar — widens when sidebar collapses */}
+        <div
+          className="absolute top-3 right-3 z-10 pointer-events-none"
+          style={{ left: resultLeft, transition: 'left 0.2s ease' }}
+        >
           <ResultBar tree={tree} egoId={egoId} targetId={targetId} />
         </div>
       </div>

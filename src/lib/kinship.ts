@@ -137,6 +137,7 @@ export class FamilyTree {
     if (a === 1 && b === 2) return this._siblingChildTerm(targetChain, target);
     if (a === 2 && b === 2) return this._cousinTerm(egoChain, targetChain, ego, target, ctx);
     if (a === 3 && b === 1) return this._grandparentSiblingTerm(egoChain, target, ctx);
+    if (a === 3 && b === 2) return this._grandparentSiblingChildTerm(egoChain, targetChain, target, ctx);
     return { key: 'generic', zh: '' as unknown as string, pinyin: '', en: `distant relative (${a} up, ${b} down)`, side: 'direct' } as TermRecord & { key: string };
   }
 
@@ -193,6 +194,37 @@ export class FamilyTree {
     return lookup(`${tang ? 'tang' : 'biao'}_${older ? 'older' : 'younger'}_${g}`);
   }
 
+  private _grandparentSiblingChildTerm(egoChain: Person[], targetChain: Person[], target: Person, ctx: Ctx): TermRecord & { key: string } {
+    const paternal      = egoChain[1].gender === 'M';
+    const grandparentM  = egoChain[2].gender === 'M';
+    const siblingOfGP   = targetChain[1];              // e.g. Cole
+    const siblingOlder  = this._isOlder(siblingOfGP.id, egoChain[2].id, ctx);
+    const m             = target.gender === 'M';
+
+    if (paternal) {
+      if (grandparentM) {
+        // 爷爷's sibling's child
+        if (m) return lookup(siblingOlder ? 'pat_gf_older_bro_child_m' : 'pat_gf_younger_bro_child_m');
+        return lookup(siblingOlder ? 'pat_gf_older_bro_child_f' : 'pat_gf_younger_bro_child_f');
+      } else {
+        // 奶奶's sibling's child
+        const siblingM = siblingOfGP.gender === 'M';
+        if (siblingM) return lookup(m ? 'pat_gm_bro_child_m' : 'pat_gm_bro_child_f');
+        return lookup(m ? 'pat_gm_sis_child_m' : 'pat_gm_sis_child_f');
+      }
+    } else {
+      if (grandparentM) {
+        // 外公's sibling's child
+        return lookup(m ? 'mat_gf_bro_child_m' : 'mat_gf_bro_child_f');
+      } else {
+        // 外婆's sibling's child
+        const siblingM = siblingOfGP.gender === 'M';
+        if (siblingM) return lookup(m ? 'mat_gm_bro_child_m' : 'mat_gm_bro_child_f');
+        return lookup(m ? 'mat_gm_sis_child_m' : 'mat_gm_sis_child_f');
+      }
+    }
+  }
+
   private _grandparentSiblingTerm(egoChain: Person[], target: Person, ctx: Ctx): TermRecord & { key: string } {
     const paternal = egoChain[1].gender === 'M';
     const grandparentMale = egoChain[2].gender === 'M';
@@ -219,9 +251,20 @@ export class FamilyTree {
   }
 
   private _inLawKey(bloodKey: string, egoGender: 'M' | 'F'): string | null {
-    if (bloodKey === 'father') return egoGender === 'M' ? 'wife_father' : 'husband_father';
-    if (bloodKey === 'mother') return egoGender === 'M' ? 'wife_mother' : 'husband_mother';
-    return null;
+    const W = egoGender === 'M'; // true = ego is male (wife's side), false = ego is female (husband's side)
+    switch (bloodKey) {
+      case 'father':           return W ? 'wife_father'            : 'husband_father';
+      case 'mother':           return W ? 'wife_mother'            : 'husband_mother';
+      case 'older_brother':    return W ? 'wife_older_brother'     : 'husband_older_brother';
+      case 'younger_brother':  return W ? 'wife_younger_brother'   : 'husband_younger_brother';
+      case 'older_sister':     return W ? 'wife_older_sister'      : 'husband_older_sister';
+      case 'younger_sister':   return W ? 'wife_younger_sister'    : 'husband_younger_sister';
+      case 'brother_son':      return W ? 'wife_brother_son'       : 'husband_brother_son';
+      case 'brother_daughter': return W ? 'wife_brother_daughter'  : 'husband_brother_daughter';
+      case 'sister_son':       return W ? 'wife_sister_son'        : 'husband_sister_son';
+      case 'sister_daughter':  return W ? 'wife_sister_daughter'   : 'husband_sister_daughter';
+      default:                 return null;
+    }
   }
 
   private _get(id: string): Person {
