@@ -2,6 +2,9 @@
 
 An interactive family tree application that computes precise **Chinese kinship terms** (汉字, pīnyīn, and English gloss) for any two people in the tree. Built with React, TypeScript, Express, and MySQL.
 
+# Figma
+Link: https://www.figma.com/proto/15mK6MLElSZcvGLZLS54PC/%E5%AE%B6%E8%B0%B1---Family-Tree?page-id=0%3A1&node-id=1-2&viewport=78%2C94%2C1.16&t=jxm6eqcyIkkPCy5Q-1&scaling=min-zoom&content-scaling=fixed
+
 ## Features
 
 - **Kinship engine** — resolves blood, affinal, and in-law relationships up to great-great-grandparents, cousins, grandparents' siblings, and their spouses
